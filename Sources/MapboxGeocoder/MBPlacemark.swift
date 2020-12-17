@@ -73,7 +73,7 @@ open class Placemark: NSObject, Codable {
         case superiorPlacemarks = "context"
         case centerCoordinate = "center"
         case code = "short_code"
-        case wikidataItemIdentifier = "wikidata"
+        case wikidata = "wikidata"
         case properties
         case boundingBox = "bbox"
     }
@@ -109,6 +109,7 @@ open class Placemark: NSObject, Codable {
         
         code = try container.decodeIfPresent(String.self, forKey: .code)?.uppercased()
         properties = try container.decodeIfPresent(Properties.self, forKey: .properties)
+        wikidata = try container.decodeIfPresent(String.self, forKey: .wikidata)
         
         if let boundingBox = try container.decodeIfPresent([CLLocationDegrees].self, forKey: .boundingBox) {
             let southWest = CLLocationCoordinate2D(geoJSON: Array(boundingBox.prefix(2)))
@@ -119,14 +120,26 @@ open class Placemark: NSObject, Codable {
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(identifier, forKey: .identifier)
         try container.encode(name, forKey: .name)
-        try container.encode(address, forKey: .address)
-        try container.encode(qualifiedName, forKey: .qualifiedName)
-        try container.encode(superiorPlacemarks, forKey: .superiorPlacemarks)
-        try container.encode(code, forKey: .code)
-        try container.encode(wikidataItemIdentifier, forKey: .wikidataItemIdentifier)
-        try container.encode(properties, forKey: .properties)
+        try container.encode(identifier, forKey: .identifier)
+        if let address = address {
+            try container.encode(address, forKey: .address)
+        }
+        if let qualifiedName = qualifiedName {
+            try container.encode(qualifiedName, forKey: .qualifiedName)
+        }
+        if let superiorPlacemarks = superiorPlacemarks {
+            try container.encode(superiorPlacemarks, forKey: .superiorPlacemarks)
+        }
+        if let code = code {
+            try container.encode(code, forKey: .code)
+        }
+        if let wikidataItemIdentifier = wikidataItemIdentifier {
+            try container.encode(wikidataItemIdentifier, forKey: .wikidata)
+        }
+        if let properties = properties {
+            try container.encode(properties, forKey: .properties)
+        }
         if let location = location {
             try container.encode([location.coordinate.longitude, location.coordinate.latitude], forKey: .centerCoordinate)
         }
@@ -216,9 +229,11 @@ open class Placemark: NSObject, Codable {
      */
     @objc open var wikidataItemIdentifier: String? {
         get {
-            return properties?.wikidata
+            return wikidata ?? properties?.wikidata
         }
     }
+    
+    @objc var wikidata: String?
     
     /**
      An array of keywords that describe the genre of the point of interest represented by the placemark.
@@ -467,7 +482,9 @@ open class GeocodedPlacemark: Placemark {
     public override func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         
-        try container.encodeIfPresent(relevance, forKey: .relevance)
+        if (relevance != -1) {
+            try container.encodeIfPresent(relevance, forKey: .relevance)
+        }
         
         if let routableLocations = routableLocations,
             !routableLocations.isEmpty {
